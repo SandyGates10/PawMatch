@@ -138,10 +138,12 @@ st.subheader(f"Tu mascota ideal pertenece al grupo: **{cluster_name}**")
 # 6. Recomendaciones
 # ============================
 
+# 1. Filtrar por cluster
 recomendados = df[df["cluster_gmm"] == cluster_user].copy()
 
-# Guardamos copia del cluster sin filtros
-recomendados_cluster = recomendados.copy()
+# Copias para fallback
+cluster_only = recomendados.copy()
+dataset_only = df.copy()
 
 # ============================
 # FILTRO 1: Edad (PRIORIDAD)
@@ -156,13 +158,29 @@ elif edad == "adulto":
 elif edad == "senior":
     recomendados = recomendados[recomendados["ageGroup_senior"] == 1]
 
-# Si no hay perros de esa edad → relajamos edad pero avisamos
+# Si no hay perros de esa edad en el cluster → buscamos edad en TODO el dataset
 if len(recomendados) == 0:
     st.warning(
         "No encontramos perritos de esa edad en este grupo. "
-        "Aquí tienes los más cercanos."
+        "Aquí tienes opciones similares en todo el refugio."
     )
-    recomendados = recomendados_cluster.copy()
+
+    if edad == "cachorro":
+        recomendados = dataset_only[dataset_only["ageGroup_baby"] == 1]
+    elif edad == "joven":
+        recomendados = dataset_only[dataset_only["ageGroup_young"] == 1]
+    elif edad == "adulto":
+        recomendados = dataset_only[dataset_only["ageGroup_adult"] == 1]
+    elif edad == "senior":
+        recomendados = dataset_only[dataset_only["ageGroup_senior"] == 1]
+
+# Si aún así no hay → usamos cluster sin filtros
+if len(recomendados) == 0:
+    st.info(
+        "No encontramos perritos de esa edad en todo el refugio. "
+        "Aquí tienes los más cercanos a tu perfil."
+    )
+    recomendados = cluster_only.copy()
 
 # ============================
 # FILTRO 2: Tamaño (SECUNDARIO)
@@ -170,13 +188,10 @@ if len(recomendados) == 0:
 
 recomendados_tamano = recomendados[recomendados["sizeGroup_ord"] == map_tamano[tamano]]
 
-# Si hay suficientes del tamaño deseado → usamos esos
 if len(recomendados_tamano) > 0:
     recomendados = recomendados_tamano
 else:
     st.info(
-        "No encontramos perritos de ese tamaño en este grupo, "
+        "No encontramos perritos de ese tamaño, "
         "pero aquí tienes opciones de la edad que elegiste."
     )
-
-st.subheader("🐶 Lomitos recomendados para ti")
