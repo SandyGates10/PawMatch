@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import joblib
-# rebuild
 
 # ============================
 # 1. Cargar modelo y datos
@@ -14,10 +13,22 @@ def load_model():
 
 @st.cache_data
 def load_data():
-    return pd.read_csv("Paw_clusterizados.csv",encoding='latin1')
+    return pd.read_csv("Paw_clusterizados.csv", encoding='latin1')
 
 gmm = load_model()
 df = load_data()
+
+# Lista EXACTA de columnas usadas para entrenar el GMM
+features = [
+    "adoptionFee", "num_breeds", "compat_score", "care_score",
+    "isCourtesyListing", "isNeedingFoster", "isSponsorable",
+    "isCatsOk", "isDogsOk", "isKidsOk", "isSpecialNeeds",
+    "isHousetrained", "coatLength_ord", "activityLevel_ord",
+    "energyLevel_ord", "sizeGroup_ord", "obedienceTraining_ord",
+    "ageGroup_adult", "ageGroup_baby", "ageGroup_senior",
+    "ageGroup_young", "sex_female", "sex_male",
+    "newPeopleReaction_cautious", "newPeopleReaction_friendly"
+]
 
 # ============================
 # 2. Interfaz
@@ -26,12 +37,12 @@ df = load_data()
 st.title("🐾 PawMatch – Encuentra a tu compañero ideal")
 
 st.write(
-    "Cuéntame qué buscas y te recomendaré perritos compatibles con la mascota "
-    "que mejor se adapte a ti."
+    "Cuéntame qué buscas y te recomendaré perritos compatibles "
+    "con la mascota que mejor se adapte a ti."
 )
 
 # ----------------------------
-# Inputs simples del usuario
+# Inputs del usuario
 # ----------------------------
 
 tamano = st.selectbox("Tamaño preferido", ["pequeño", "mediano", "grande"])
@@ -44,8 +55,14 @@ compat_ninos = st.checkbox("Tengo niños")
 
 actividad = st.selectbox("Tu nivel de actividad diario", ["tranquilo", "moderado", "activo"])
 
+# NUEVA PREGUNTA
+contacto_personas = st.selectbox(
+    "¿Tu lomito estará en constante contacto con más personas?",
+    ["sí", "no"]
+)
+
 # ============================
-# 3. Mapear inputs a variables internas
+# 3. Mapear inputs
 # ============================
 
 map_tamano = {"pequeño": 0, "mediano": 1, "grande": 2}
@@ -58,37 +75,49 @@ age_baby = 1 if edad == "cachorro" else 0
 age_senior = 1 if edad == "senior" else 0
 age_young = 1 if edad == "joven" else 0
 
+# Sociabilidad
+friendly = 1 if contacto_personas == "sí" else 0
+cautious = 1 - friendly
+
 # ============================
-# 4. Construir vector completo (alineado al GMM)
+# 4. Construir X_user refinado
 # ============================
 
+prom = df.mean(numeric_only=True)
+
 X_user = pd.DataFrame([{
-    "adoptionFee": 0,
-    "num_breeds": 1,
-    "compat_score": 0,
-    "care_score": 0,
-    "isCourtesyListing": 0,
-    "isNeedingFoster": 0,
-    "isSponsorable": 0,
+    # Variables del usuario
     "isCatsOk": int(compat_gatos),
     "isDogsOk": int(compat_perros),
     "isKidsOk": int(compat_ninos),
-    "isSpecialNeeds": 0,
-    "isHousetrained": 0,
-    "coatLength_ord": 1,
     "activityLevel_ord": map_actividad[actividad],
     "energyLevel_ord": map_energia[energia],
     "sizeGroup_ord": map_tamano[tamano],
-    "obedienceTraining_ord": 1,
     "ageGroup_adult": age_adult,
     "ageGroup_baby": age_baby,
     "ageGroup_senior": age_senior,
     "ageGroup_young": age_young,
+    "newPeopleReaction_friendly": friendly,
+    "newPeopleReaction_cautious": cautious,
+
+    # Variables no controladas → promedio del dataset
+    "adoptionFee": prom["adoptionFee"],
+    "num_breeds": prom["num_breeds"],
+    "compat_score": prom["compat_score"],
+    "care_score": prom["care_score"],
+    "isCourtesyListing": 0,
+    "isNeedingFoster": 0,
+    "isSponsorable": 0,
+    "isSpecialNeeds": 0,
+    "isHousetrained": prom["isHousetrained"],
+    "coatLength_ord": prom["coatLength_ord"],
+    "obedienceTraining_ord": prom["obedienceTraining_ord"],
     "sex_female": 0,
     "sex_male": 0,
-    "newPeopleReaction_cautious": 0,
-    "newPeopleReaction_friendly": 1,
 }])
+
+# Asegurar orden correcto
+X_user = X_user[features]
 
 # ============================
 # 5. Predicción del cluster
@@ -106,11 +135,10 @@ recomendados = df[df["cluster_gmm"] == cluster_user].copy()
 
 st.subheader("🐶 Lomitos recomendados para ti")
 
-# Mapeos bonitos para mostrar al usuario
 map_tamano_rev = {0: "Pequeño", 1: "Mediano", 2: "Grande"}
 map_energia_rev = {0: "Baja", 1: "Media", 2: "Alta"}
 
-# Estilos para las tarjetas tipo Tinder (se inyectan una sola vez)
+# Estilos
 st.markdown(
     """
     <style>
@@ -151,7 +179,7 @@ for _, row in recomendados.sample(10).iterrows():
 
         # Información
         with col2:
-            nombre = row["name"] if "name" in row else "Perrito"
+            nombre = row.get("name", "Perrito")
 
             edad_texto = (
                 "Adulto" if row["ageGroup_adult"] else
