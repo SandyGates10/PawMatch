@@ -137,7 +137,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-for _, row in recomendados.head(10).iterrows():
+for _, row in recomendados..sample(10).iterrows():
 
     with st.container():
         st.markdown('<div class="card">', unsafe_allow_html=True)
