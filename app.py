@@ -14,7 +14,7 @@ def load_model():
 
 @st.cache_data
 def load_data():
-    return pd.read_csv("Paw_clusterizados.csv")
+    return pd.read_csv("Paw_clusterizados.csv",encoding='latin1')
 
 gmm = load_model()
 df = load_data()
