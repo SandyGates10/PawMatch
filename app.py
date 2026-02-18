@@ -140,14 +140,13 @@ st.subheader(f"Tu mascota ideal pertenece al grupo: **{cluster_name}**")
 
 recomendados = df[df["cluster_gmm"] == cluster_user].copy()
 
+# Guardamos copia del cluster sin filtros
+recomendados_cluster = recomendados.copy()
+
 # ============================
-# FILTROS POR PREFERENCIAS
+# FILTRO 1: Edad (PRIORIDAD)
 # ============================
 
-# Filtro por tamaño
-recomendados = recomendados[recomendados["sizeGroup_ord"] == map_tamano[tamano]]
-
-# Filtro por edad
 if edad == "cachorro":
     recomendados = recomendados[recomendados["ageGroup_baby"] == 1]
 elif edad == "joven":
@@ -157,75 +156,27 @@ elif edad == "adulto":
 elif edad == "senior":
     recomendados = recomendados[recomendados["ageGroup_senior"] == 1]
 
+# Si no hay perros de esa edad → relajamos edad pero avisamos
+if len(recomendados) == 0:
+    st.warning(
+        "No encontramos perritos de esa edad en este grupo. "
+        "Aquí tienes los más cercanos."
+    )
+    recomendados = recomendados_cluster.copy()
+
+# ============================
+# FILTRO 2: Tamaño (SECUNDARIO)
+# ============================
+
+recomendados_tamano = recomendados[recomendados["sizeGroup_ord"] == map_tamano[tamano]]
+
+# Si hay suficientes del tamaño deseado → usamos esos
+if len(recomendados_tamano) > 0:
+    recomendados = recomendados_tamano
+else:
+    st.info(
+        "No encontramos perritos de ese tamaño en este grupo, "
+        "pero aquí tienes opciones de la edad que elegiste."
+    )
+
 st.subheader("🐶 Lomitos recomendados para ti")
-
-map_tamano_rev = {0: "Pequeño", 1: "Mediano", 2: "Grande"}
-map_energia_rev = {0: "Baja", 1: "Media", 2: "Alta"}
-
-# Estilos
-st.markdown(
-    """
-    <style>
-    .card {
-        background-color: #ffffff;
-        padding: 15px;
-        border-radius: 12px;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-        margin-bottom: 20px;
-    }
-    .name {
-        font-size: 24px;
-        font-weight: bold;
-        color: #333333;
-    }
-    .info {
-        font-size: 16px;
-        color: #555555;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
-
-# Evitar error si hay pocos resultados
-muestra = min(10, len(recomendados))
-
-for _, row in recomendados.sample(muestra).iterrows():
-
-    with st.container():
-        st.markdown('<div class="card">', unsafe_allow_html=True)
-
-        col1, col2 = st.columns([1, 2])
-
-        # Foto
-        with col1:
-            if "pictureThumbnailUrl" in row and pd.notna(row["pictureThumbnailUrl"]):
-                st.image(row["pictureThumbnailUrl"], width=200)
-            else:
-                st.write("Sin foto disponible")
-
-        # Información
-        with col2:
-            nombre = row.get("name", "Perrito")
-
-            edad_texto = (
-                "Adulto" if row["ageGroup_adult"] else
-                "Cachorro" if row["ageGroup_baby"] else
-                "Joven" if row["ageGroup_young"] else
-                "Senior" if row["ageGroup_senior"] else
-                "Sin dato"
-            )
-
-            st.markdown(f'<div class="name">{nombre}</div>', unsafe_allow_html=True)
-            st.markdown(
-                f"""
-                <div class="info">
-                🐾 <b>Edad:</b> {edad_texto}<br>
-                📏 <b>Tamaño:</b> {map_tamano_rev.get(row['sizeGroup_ord'], 'N/A')}<br>
-                ⚡ <b>Energía:</b> {map_energia_rev.get(row['energyLevel_ord'], 'N/A')}<br>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-        st.markdown('</div>', unsafe_allow_html=True)
