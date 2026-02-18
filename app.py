@@ -138,66 +138,55 @@ st.subheader(f"Tu mascota ideal pertenece al grupo: **{cluster_name}**")
 # 6. Recomendaciones
 # ============================
 
-# 1. Filtrar por cluster
-recomendados = df[df["cluster_gmm"] == cluster_user].copy()
+# 1. Intentamos primero con el cluster predicho
+clusters_en_orden = [cluster_user] + [c for c in df["cluster_gmm"].unique() if c != cluster_user]
 
-# Copias para fallback
-cluster_only = recomendados.copy()
-dataset_only = df.copy()
+recomendados = None
+cluster_final = None
 
-# ============================
-# FILTRO 1: Edad (PRIORIDAD)
-# ============================
+for c in clusters_en_orden:
+    candidatos = df[df["cluster_gmm"] == c].copy()
 
-if edad == "cachorro":
-    recomendados = recomendados[recomendados["ageGroup_baby"] == 1]
-elif edad == "joven":
-    recomendados = recomendados[recomendados["ageGroup_young"] == 1]
-elif edad == "adulto":
-    recomendados = recomendados[recomendados["ageGroup_adult"] == 1]
-elif edad == "senior":
-    recomendados = recomendados[recomendados["ageGroup_senior"] == 1]
-
-# Si no hay perros de esa edad en el cluster → buscar en TODO el dataset
-if len(recomendados) == 0:
-    st.warning(
-        "No encontramos perritos de esa edad en este grupo. "
-        "Aquí tienes opciones similares en todo el refugio."
-    )
-
+    # FILTRO 1: Edad (PRIORIDAD)
     if edad == "cachorro":
-        recomendados = dataset_only[dataset_only["ageGroup_baby"] == 1]
+        candidatos = candidatos[candidatos["ageGroup_baby"] == 1]
     elif edad == "joven":
-        recomendados = dataset_only[dataset_only["ageGroup_young"] == 1]
+        candidatos = candidatos[candidatos["ageGroup_young"] == 1]
     elif edad == "adulto":
-        recomendados = dataset_only[dataset_only["ageGroup_adult"] == 1]
+        candidatos = candidatos[candidatos["ageGroup_adult"] == 1]
     elif edad == "senior":
-        recomendados = dataset_only[dataset_only["ageGroup_senior"] == 1]
+        candidatos = candidatos[candidatos["ageGroup_senior"] == 1]
 
-# Si aún así no hay → usar cluster sin filtros
-if len(recomendados) == 0:
-    st.info(
-        "No encontramos perritos de esa edad en todo el refugio. "
-        "Aquí tienes los más cercanos a tu perfil."
-    )
-    recomendados = cluster_only.copy()
+    # FILTRO 2: Tamaño (SECUNDARIO)
+    candidatos_tamano = candidatos[candidatos["sizeGroup_ord"] == map_tamano[tamano]]
 
-# ============================
-# FILTRO 2: Tamaño (SECUNDARIO)
-# ============================
+    # Si hay resultados con ambos filtros → usamos esos
+    if len(candidatos_tamano) > 0:
+        recomendados = candidatos_tamano
+        cluster_final = c
+        break
 
-recomendados_tamano = recomendados[recomendados["sizeGroup_ord"] == map_tamano[tamano]]
+    # Si no hay tamaño pero sí edad → usamos esos
+    if len(candidatos) > 0:
+        recomendados = candidatos
+        cluster_final = c
+        break
 
-if len(recomendados_tamano) > 0:
-    recomendados = recomendados_tamano
+# Si no encontramos nada en ningún cluster → usamos todo el dataset
+if recomendados is None or len(recomendados) == 0:
+    recomendados = df.copy()
+    cluster_final = None
+
+# Mostrar nombre del cluster final (si existe)
+if cluster_final is not None:
+    cluster_name = cluster_names.get(cluster_final, "Grupo desconocido")
 else:
-    st.info(
-        "No encontramos perritos de ese tamaño, "
-        "pero aquí tienes opciones de la edad que elegiste."
-    )
+    cluster_name = "Opciones generales del refugio"
+
+st.subheader(f"Tu mascota ideal pertenece al grupo: **{cluster_name}**")
 
 # ============================
-# Mostrar tarjetas
+# Mostrar tarjetas (TOP 5)
 # ============================
 
 st.subheader("🐶 Lomitos recomendados para ti")
@@ -230,9 +219,10 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-muestra = min(10, len(recomendados))
+# Tomamos los primeros 5 perritos encontrados
+top5 = recomendados.head(5)
 
-for _, row in recomendados.sample(muestra).iterrows():
+for _, row in top5.iterrows():
 
     with st.container():
         st.markdown('<div class="card">', unsafe_allow_html=True)
