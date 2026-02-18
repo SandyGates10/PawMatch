@@ -46,7 +46,6 @@ st.write(
 # ----------------------------
 
 tamano = st.selectbox("Tamaño preferido", ["pequeño", "mediano", "grande"])
-energia = st.selectbox("Nivel de energía", ["bajo", "medio", "alto"])
 edad = st.selectbox("Edad preferida", ["cachorro", "joven", "adulto", "senior"])
 
 compat_perros = st.checkbox("Tengo otros perros")
@@ -66,7 +65,6 @@ contacto_personas = st.selectbox(
 # ============================
 
 map_tamano = {"pequeño": 0, "mediano": 1, "grande": 2}
-map_energia = {"bajo": 0, "medio": 1, "alto": 2}
 map_actividad = {"tranquilo": 0, "moderado": 1, "activo": 2}
 
 # Dummies de edad
@@ -91,7 +89,6 @@ X_user = pd.DataFrame([{
     "isDogsOk": int(compat_perros),
     "isKidsOk": int(compat_ninos),
     "activityLevel_ord": map_actividad[actividad],
-    "energyLevel_ord": map_energia[energia],
     "sizeGroup_ord": map_tamano[tamano],
     "ageGroup_adult": age_adult,
     "ageGroup_baby": age_baby,
@@ -112,6 +109,7 @@ X_user = pd.DataFrame([{
     "isHousetrained": prom["isHousetrained"],
     "coatLength_ord": prom["coatLength_ord"],
     "obedienceTraining_ord": prom["obedienceTraining_ord"],
+    "energyLevel_ord": prom["energyLevel_ord"],  # ← PROMEDIO EN VEZ DE PREGUNTA
     "sex_female": 0,
     "sex_male": 0,
 }])
@@ -136,13 +134,28 @@ cluster_name = cluster_names.get(cluster_user, "Cluster desconocido")
 
 st.subheader(f"Tu mascota ideal pertenece al grupo: **{cluster_name}**")
 
-
-
 # ============================
 # 6. Recomendaciones
 # ============================
 
 recomendados = df[df["cluster_gmm"] == cluster_user].copy()
+
+# ============================
+# FILTROS POR PREFERENCIAS
+# ============================
+
+# Filtro por tamaño
+recomendados = recomendados[recomendados["sizeGroup_ord"] == map_tamano[tamano]]
+
+# Filtro por edad
+if edad == "cachorro":
+    recomendados = recomendados[recomendados["ageGroup_baby"] == 1]
+elif edad == "joven":
+    recomendados = recomendados[recomendados["ageGroup_young"] == 1]
+elif edad == "adulto":
+    recomendados = recomendados[recomendados["ageGroup_adult"] == 1]
+elif edad == "senior":
+    recomendados = recomendados[recomendados["ageGroup_senior"] == 1]
 
 st.subheader("🐶 Lomitos recomendados para ti")
 
@@ -174,7 +187,10 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-for _, row in recomendados.sample(10).iterrows():
+# Evitar error si hay pocos resultados
+muestra = min(10, len(recomendados))
+
+for _, row in recomendados.sample(muestra).iterrows():
 
     with st.container():
         st.markdown('<div class="card">', unsafe_allow_html=True)
