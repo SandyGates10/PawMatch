@@ -9,7 +9,7 @@ import joblib
 
 @st.cache_resource
 def load_model():
-    return joblib.load("gmm_pawmatch.pkl")
+    return joblib.load("pawmatch.pkl")
 
 @st.cache_data
 def load_data():
