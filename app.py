@@ -123,9 +123,20 @@ X_user = X_user[features]
 # 5. Predicción del cluster
 # ============================
 
-cluster_user = gmm.predict(X_user)[0]
+cluster_names = {
+    0: "Sociables y tranquilos",
+    1: "Jóvenes amables",
+    2: "Pequeños y bonitos",
+    3: "Los más cariñosos",
+    4: "Peluditos sensibles"
+}
 
-st.subheader(f"Tu mascota ideal pertenece al cluster: **{cluster_user}**")
+cluster_user = gmm.predict(X_user)[0]
+cluster_name = cluster_names.get(cluster_user, "Cluster desconocido")
+
+st.subheader(f"Tu mascota ideal pertenece al grupo: **{cluster_name}**")
+
+
 
 # ============================
 # 6. Recomendaciones
