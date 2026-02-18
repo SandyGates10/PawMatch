@@ -86,10 +86,8 @@ X_user = pd.DataFrame([{
     "ageGroup_young": age_young,
     "sex_female": 0,
     "sex_male": 0,
-    "newPeopleReaction_aggressive": 0,
     "newPeopleReaction_cautious": 0,
     "newPeopleReaction_friendly": 1,
-    "newPeopleReaction_protective": 0
 }])
 
 # ============================
