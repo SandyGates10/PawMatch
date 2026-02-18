@@ -129,10 +129,10 @@ cluster_names = {
     4: "Peluditos sensibles"
 }
 
-cluster_user = gmm.predict(X_user)[0]
-cluster_name = cluster_names.get(cluster_user, "Cluster desconocido")
+# cluster_user = gmm.predict(X_user)[0]
+# cluster_name = cluster_names.get(cluster_user, "Cluster desconocido")
 
-st.subheader(f"Tu mascota ideal pertenece al grupo: **{cluster_name}**")
+# st.subheader(f"Tu mascota ideal pertenece al grupo: **{cluster_name}**")
 
 # ============================
 # 6. Recomendaciones
