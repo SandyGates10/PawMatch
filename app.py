@@ -158,7 +158,7 @@ elif edad == "adulto":
 elif edad == "senior":
     recomendados = recomendados[recomendados["ageGroup_senior"] == 1]
 
-# Si no hay perros de esa edad en el cluster → buscamos edad en TODO el dataset
+# Si no hay perros de esa edad en el cluster → buscar en TODO el dataset
 if len(recomendados) == 0:
     st.warning(
         "No encontramos perritos de esa edad en este grupo. "
@@ -174,7 +174,7 @@ if len(recomendados) == 0:
     elif edad == "senior":
         recomendados = dataset_only[dataset_only["ageGroup_senior"] == 1]
 
-# Si aún así no hay → usamos cluster sin filtros
+# Si aún así no hay → usar cluster sin filtros
 if len(recomendados) == 0:
     st.info(
         "No encontramos perritos de esa edad en todo el refugio. "
@@ -195,3 +195,79 @@ else:
         "No encontramos perritos de ese tamaño, "
         "pero aquí tienes opciones de la edad que elegiste."
     )
+
+# ============================
+# Mostrar tarjetas
+# ============================
+
+st.subheader("🐶 Lomitos recomendados para ti")
+
+map_tamano_rev = {0: "Pequeño", 1: "Mediano", 2: "Grande"}
+map_energia_rev = {0: "Baja", 1: "Media", 2: "Alta"}
+
+# Estilos
+st.markdown(
+    """
+    <style>
+    .card {
+        background-color: #ffffff;
+        padding: 15px;
+        border-radius: 12px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+    .name {
+        font-size: 24px;
+        font-weight: bold;
+        color: #333333;
+    }
+    .info {
+        font-size: 16px;
+        color: #555555;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+muestra = min(10, len(recomendados))
+
+for _, row in recomendados.sample(muestra).iterrows():
+
+    with st.container():
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+
+        col1, col2 = st.columns([1, 2])
+
+        # Foto
+        with col1:
+            if "pictureThumbnailUrl" in row and pd.notna(row["pictureThumbnailUrl"]):
+                st.image(row["pictureThumbnailUrl"], width=200)
+            else:
+                st.write("Sin foto disponible")
+
+        # Información
+        with col2:
+            nombre = row.get("name", "Perrito")
+
+            edad_texto = (
+                "Adulto" if row["ageGroup_adult"] else
+                "Cachorro" if row["ageGroup_baby"] else
+                "Joven" if row["ageGroup_young"] else
+                "Senior" if row["ageGroup_senior"] else
+                "Sin dato"
+            )
+
+            st.markdown(f'<div class="name">{nombre}</div>', unsafe_allow_html=True)
+            st.markdown(
+                f"""
+                <div class="info">
+                🐾 <b>Edad:</b> {edad_texto}<br>
+                📏 <b>Tamaño:</b> {map_tamano_rev.get(row['sizeGroup_ord'], 'N/A')}<br>
+                ⚡ <b>Energía:</b> {map_energia_rev.get(row['energyLevel_ord'], 'N/A')}<br>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+        st.markdown('</div>', unsafe_allow_html=True)
