@@ -223,7 +223,7 @@ st.markdown(
 )
 
 # TOP 5 garantizado
-top5 = recomendados.head(5)
+top5 = recomendados.sample(5)
 
 for _, row in top5.iterrows():
 
